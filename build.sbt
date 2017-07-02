@@ -14,16 +14,17 @@ libraryDependencies ++= Seq(
 
 scalacOptions ++= Seq(
                       "-unchecked",
-                      "-deprecation"//,
-                      // "-feature",
-                      // "-Xfatal-warnings",
+                      "-deprecation",
+                       "-feature",
+                       "-language:higherKinds",
+                      "-Xfatal-warnings",
                       // "-Xlint:_",
                       // "-Ywarn-dead-code",
                       // "-Ywarn-inaccessible",
                       // "-Ywarn-unused-import",
-                      // "-Ywarn-infer-any",
-                      // "-Ywarn-nullary-override",
-                      // "-Ywarn-nullary-unit"
+                      "-Ywarn-infer-any",
+                      "-Ywarn-nullary-override",
+                      "-Ywarn-nullary-unit"
                      )
 
 scalacOptions in (Compile, console) ~= (_.filterNot(Seq("-Xfatal-warnings", "-Ywarn-unused-import") contains _))
