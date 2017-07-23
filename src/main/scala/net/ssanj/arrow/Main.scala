@@ -21,9 +21,16 @@ object Main extends App {
 
   private def doubleAge: Age => Age = a => Age(doubleNumber(a.age))
 
-  private def lift(): Unit = {
+  private def id(): Unit = {
     val intF1 = fa.id[Int] //Function1[Int, Int]
-    println(intF1(5))
+    val result = intF1(5)
+    println(s"id(5): $result")
+  }
+
+  private def lift(): Unit = {
+    val intF1 = fa.lift[Int, Boolean](_ > 10)
+    val result = intF1(20)
+    println(s"lift(Int => Boolean): $result")
   }
 
   private def first(): Unit = {
@@ -79,10 +86,24 @@ object Main extends App {
 
   }
 
+  private def compose(): Unit = {
+    def personA = fa.lift[(Name, Age), Person](na => Person(na._1, na._2))
+    val makePersonStringA = fa.lift[Person, String](p =>  s"person[name='${p.name.first}' ${p.name.last}, age=${p.age} yrs]")
+
+    val composeF: Tuple2[Name, Age] => String = personA >>> makePersonStringA
+    val andThenF: Tuple2[Name, Age] => String =  makePersonStringA <<< personA
+    val result1: String = composeF(name, age)
+    val result2: String = andThenF(name, age)
+    println(s"compose: $result1")
+    println(s"andThen: $result2")
+  }
+
+  id()
   lift()
   first()
   second()
   split()
   combine()
   liftA2Ex()
+  compose()
 }
