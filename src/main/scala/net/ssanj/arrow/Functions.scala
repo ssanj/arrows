@@ -7,6 +7,7 @@ object Functions {
 
   type UserData = Map[String, List[ItemId]]
   type ItemData = Map[Long, ItemDetail]
+  type Results  = List[Either[String, ItemDetail]]
 
   val userData = Map[String, List[ItemId]](
     "1000" -> List(ItemId(1001), ItemId(1002), ItemId(1003), ItemId(1007), ItemId(1004)),
@@ -40,6 +41,6 @@ object Functions {
 
   val itemDetailString: List[ItemDetail] => String = _.map(id => s"${id.desc}=$$${id.value}").mkString(",")
 
-  val errorString: List[Either[String, ItemDetail]] => String = itemsE =>
+  val errorString: Results => String = itemsE =>
     itemsE.collect { case Left(error) => error } mkString("\n")
 }

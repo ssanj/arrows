@@ -102,50 +102,44 @@ object Main extends App {
   private def pipeline(): Unit = {
     import Functions._
 
-    //User => UserData => List[ItemId]
-    val getSavedItemsAr = fa.lift[User, UserData => List[ItemId]](getSavedItems)
-
-    //User => ItemId => ItemDescReq
-    val idToDescAr = fa.lift[User, ItemId => ItemDescReq](idToDesc)
-
     // User => (UserData => List[ItemId], (Item => ItemDescReq))
-    val f1 = ArrowFuncs.combine(getSavedItemsAr, idToDescAr)
+    val f1 = ArrowFuncs.combine(getSavedItems, idToDesc)
 
     // User => List[ItemDescReq]
     val f2 = f1 >>> { case (fi, fd) =>  fi(userData) map fd }
 
-    //User => (List(Either[String, ItemDetail]), List(Either[String, ItemDetail]))
+    //User => (Results, Results)
     val f3 = f2 >>> (_ map getDetails) >>> (_ map (_(itemData))) >>> (_.partition(_.isLeft))
 
-    //(List[Either[String, ItemDetail]], List[Either[String, ItemDetail]]) => (List[Either[String, ItemDetail]], List[ItemDetail])
-    val f4 = fa.second[List[Either[String, ItemDetail]], List[ItemDetail], List[Either[String, ItemDetail]]](_ collect { case Right(value) => value })
+    //(Results, Results) => (Results, List[ItemDetail])
+    val f4 = fa.second[Results, List[ItemDetail], Results](_ collect { case Right(value) => value })
 
-    //User => (List[Either[String, ItemDetail]], List[ItemDetail])
+    //User => (Results, List[ItemDetail])
     val f5 = f3 >>> f4
 
-    //(List[Either[String, ItemDetail]], List[ItemDetail]) => (List[Either[String, ItemDetail]], Tuple2[Range, Range] => ValuableItemsResponse)
+    //(Results, List[ItemDetail]) => (Results, Tuple2[Range, Range] => ValuableItemsResponse)
     val f6 =
       fa.second[List[ItemDetail],
                 Tuple2[Range, Range] => ValuableItemsResponse,
-                List[Either[String, ItemDetail]]](
+                Results](
         items => prices => valuableItemsResponse(prices)(items)
       )
 
-     //User => (List[Either[String, ItemDetail]], Tuple2[Range, Range] => ValuableItemsResponse)
+     //User => (Results, Tuple2[Range, Range] => ValuableItemsResponse)
      val f7 = f5 >>>  f6
 
-     //(List[Either[String, ItemDetail]], Tuple2[Range, Range] => ValuableItemsResponse) => (List[Either[String, ItemDetail]], ValuableItemsResponse)
+     //(Results, Tuple2[Range, Range] => ValuableItemsResponse) => (Results, ValuableItemsResponse)
      val f8 =
       fa.second[
         Tuple2[Range, Range] => ValuableItemsResponse,
         ValuableItemsResponse,
-        List[Either[String, ItemDetail]]](_(Range(500, 3000), Range(10000, 100000)))
+        Results](_(Range(500, 3000), Range(10000, 100000)))
 
-    //User => (List[Either[String, ItemDetail]], ValuableItemsResponse)
+    //User => (Results, ValuableItemsResponse)
     val f9 = f7 >>> f8
 
-    //(List[Either[String, ItemDetail]], ValuableItemsResponse) => (String, String)
-    val f10 = fa.split[List[Either[String, ItemDetail]], String, ValuableItemsResponse, String](
+    //(Results, ValuableItemsResponse) => (String, String)
+    val f10 = fa.split[Results, String, ValuableItemsResponse, String](
       errorString, valuableItemsResponseString
     )
 
@@ -157,6 +151,31 @@ object Main extends App {
     println(s"pipeline: $values, errors: $errors")
   }
 
+  private def pipelineCondensed(): Unit = {
+    import Functions._
+
+    val pipeline =
+      ArrowFuncs.combine(getSavedItems, idToDesc) >>>
+      { case (fi, fd) =>  fi(userData) map fd } >>>
+      (_ map getDetails) >>>
+      (_ map (_(itemData))) >>>
+      (_.partition(_.isLeft)) >>>
+      fa.second[Results, List[ItemDetail], Results](_ collect { case Right(value) => value }) >>>
+      fa.second[List[ItemDetail], Tuple2[Range, Range] => ValuableItemsResponse, Results](
+        items => prices => valuableItemsResponse(prices)(items)
+      ) >>>
+      fa.second[Tuple2[Range, Range] => ValuableItemsResponse, ValuableItemsResponse, Results](
+        _(Range(500, 3000), Range(10000, 100000))
+      ) >>>
+      fa.split[Results, String, ValuableItemsResponse, String](
+        errorString, valuableItemsResponseString
+      )
+
+      val (errors, values) = pipeline(User("Guybrush threepwood", "1000"))
+
+      println(s"pipeline condensed: $values, errors: $errors")
+  }
+
   id()
   lift()
   first()
@@ -166,4 +185,5 @@ object Main extends App {
   liftA2Ex()
   compose()
   pipeline()
+  pipelineCondensed()
 }
