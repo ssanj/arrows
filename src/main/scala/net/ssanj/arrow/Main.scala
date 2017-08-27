@@ -88,8 +88,8 @@ object Main extends App {
   }
 
   private def compose(): Unit = {
-    def personA = fa.lift[(Name, Age), Person](na => Person(na._1, na._2))
-    val makePersonStringA = fa.lift[Person, String](p =>  s"person[name='${p.name.first}' ${p.name.last}, age=${p.age} yrs]")
+    def personA: Tuple2[Name, Age] => Person = na => Person(na._1, na._2)
+    val makePersonStringA: Person  => String = p =>  s"person[name='${p.name.first}' ${p.name.last}, age=${p.age} yrs]"
 
     val composeF: Tuple2[Name, Age] => String = personA >>> makePersonStringA
     val andThenF: Tuple2[Name, Age] => String =  makePersonStringA <<< personA
@@ -102,7 +102,7 @@ object Main extends App {
   private def pipeline(): Unit = {
     import Functions._
 
-    // User => (UserData => List[ItemId], (Item => ItemDescReq))
+    // User => (UserData => List[ItemId], (ItemId => ItemDescReq))
     val f1 = ArrowFuncs.combine(getSavedItems, idToDesc)
 
     // User => List[ItemDescReq]
